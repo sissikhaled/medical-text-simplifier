@@ -1,0 +1,15 @@
+{
+  "run_name": "smoke_mac",
+  "best_eval_loss": 2.1046738624572754,
+  "best_epoch": 1.0,
+  "best_eval_perplexity": 8.20442680161704,
+  "epochs_completed": 1.0,
+  "global_steps": 50,
+  "stopped_early": false,
+  "train_minutes": 3.6,
+  "device": "mps",
+  "bf16": false,
+  "best_model_dir": "checkpoints/smoke_mac/best",
+  "best_checkpoint": "checkpoints/smoke_mac/checkpoint-50",
+  "resumed": false
+}

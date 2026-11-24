@@ -133,3 +133,46 @@ Zero-shot used the instruction *"Rewrite the following medical text in plain lan
 - **Zero-shot does not simplify, it shortens.** Given an instruction, FLAN-T5 mostly returns one key sentence from the abstract (about 44 words, 15% of the input length) with the jargon intact. The lower FKGL (13.99) comes from short output, not plain wording.
 - **Copy-input scores a fairly high SARI (41.8) at paragraph level.** With one long reference, SARI's "keep" component rewards keeping the many words the source and reference share. A fine-tuned model must therefore beat **41.8**, not just the zero-shot 33.6, to show real simplification. This is a known limitation of SARI on long texts and worth discussing in the report.
 - BLEU and ROUGE against a single human summary are low even for the copy baseline. Many different good simplifications exist, so these scores are best read as relative comparisons.
+
+## Phase 4 — Fine-tuning pipeline and Mac smoke test (2026-11-24)
+
+**What:**
+- `src/train.py`: fine-tunes FLAN-T5 with the Hugging Face `Seq2SeqTrainer`. Every setting comes from a YAML file in `configs/`.
+  - Each epoch: validation loss, a checkpoint, and early stopping on validation loss.
+  - At the end: the best model is reloaded and saved to `<output_dir>/<run>/best/`, a few validation abstracts are simplified with it, and the loss curve is plotted.
+- `configs/base.yaml`: the main Colab configuration. `configs/smoke_mac.yaml`: a tiny end-to-end test.
+- `tests/test_configs.py`: every config is valid and run names are unique (22 tests pass in total).
+
+**Why a smoke test:** a cheap run that exercises every step (data → tokenization → training → evaluation → checkpoint → reload → generation) catches bugs in minutes on the Mac instead of after hours on Colab.
+
+### Main configuration (`configs/base.yaml`)
+| Setting | Value | Reason |
+|---|---|---|
+| Model | `google/flan-t5-base` | Agreed in planning. |
+| Input / output length | 1024 / 768 tokens | Phase 2 length analysis. |
+| Optimizer | AdamW, weight decay 0.01 | Standard for fine-tuning Transformers. |
+| Learning rate | 3e-4, linear decay, 5% warmup | Common for T5 fine-tuning; warmup avoids large early updates. |
+| Batch | 4 × 4 gradient accumulation = 16 | Fits a 16 GB T4 with long sequences; effective batch of 16 is a common default. |
+| Epochs | up to 10, early stopping patience 2 | Stops once validation loss stops improving. |
+| Activation checkpointing | on | Recomputes activations in the backward pass: about 20% slower, much less memory. |
+| Precision | `auto` → bf16 only on GPUs with native bf16 (A100/L4); fp32 on T4 and Mac | T5 overflows in fp16, so fp16 is never used. |
+| Checkpoints | full state (with optimizer) | Lets an interrupted Colab session resume with `--resume`. |
+
+**Implementation details:**
+- **Eager attention.** The model is loaded with `attn_implementation="eager"` so attention weights stay available for the heatmap bonus later; the default SDPA attention in transformers 5.x returns none.
+- **Padding.** Each batch is padded only to its own longest example, and padded label positions (-100) are ignored by the loss.
+
+### Smoke test result (Mac M2, MPS, fp32)
+200 training pairs, 20 validation pairs, 1 epoch, input 512 tokens, batch 2 × 2: **50 steps in 3.6 min** (about 4.3 s per optimizer step).
+
+| Check | Result |
+|---|---|
+| Training runs and loss decreases | ✅ Train loss 2.72 → ~2.40. Validation loss **2.28 → 2.10** (untrained → after 1 epoch; perplexity 8.2). |
+| Best model saved and reloaded | ✅ The reloaded `best/` model reproduces the trainer's validation loss exactly (2.1047). |
+| Embedding warning on reload ("missing keys embed_tokens") | ✅ Harmless: the encoder and decoder embeddings are verified to be tied to the shared embedding matrix. |
+| Generation from the reloaded model | ✅ `runs/smoke_mac/val_samples.jsonl`. As expected after 200 examples, the output mostly shortens the abstract and does not yet simplify. |
+| Loss logging quirk | ✅ Confirmed: the logged training loss is **summed** over gradient-accumulation steps. The first logged loss was 5.44 while the untrained model's real loss is ~2.3–2.7. `log_history.csv` therefore has a second column divided by the accumulation steps, which is what the plots use. |
+
+**Cost estimate:** at the Mac's speed, a full epoch with 1024-token inputs would take roughly 2–3 hours, so a 10-epoch run would not be practical. This confirms full training belongs on Colab.
+
+**Disk:** a weights-only checkpoint of flan-t5-base is 947 MB; a full checkpoint with optimizer state is about 3 GB. The smoke checkpoints were deleted after verification.

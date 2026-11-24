@@ -1,0 +1,31 @@
+# Smoke test on the Mac (M2, MPS): proves training, saving, reloading and
+# generation work end to end before spending Colab time. Not a real result.
+run_name: smoke_mac
+model_name: google/flan-t5-base
+seed: 42
+
+prefix: "simplify: "
+max_source_tokens: 512
+max_target_tokens: 768
+limit_train: 200
+limit_val: 20
+
+learning_rate: 3.0e-4
+optim: adamw_torch
+weight_decay: 0.01
+lr_scheduler_type: linear
+warmup_steps: 0.05
+max_grad_norm: 1.0
+num_train_epochs: 1
+per_device_train_batch_size: 2
+per_device_eval_batch_size: 2
+gradient_accumulation_steps: 2
+
+activation_checkpointing: true
+precision: fp32
+
+# Weights only: ~1 GB per checkpoint instead of ~3 GB (disk is tight on the Mac)
+save_only_model: true
+
+logging_steps: 5
+val_samples: 2

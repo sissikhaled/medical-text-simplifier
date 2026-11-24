@@ -9,7 +9,7 @@ Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS
 - [x] Phase 1 — Environment
 - [x] Phase 2 — Data acquisition and exploration
 - [x] Phase 3 — Preprocessing and evaluation code
-- [ ] Phase 4 — Fine-tuning pipeline (Mac smoke test)
+- [x] Phase 4 — Fine-tuning pipeline (Mac smoke test)
 - [ ] Phase 5 — Full training on Google Colab
 - [ ] Phase 6 — Evaluation and analysis
 - [ ] Phase 7 — Gradio demo
@@ -50,4 +50,15 @@ python -m src.eval.baselines --which zeroshot
 ```
 Results go to `runs/baseline_copy/` and `runs/baseline_zeroshot/` (`config.json`, `predictions.jsonl`, `metrics.json`).
 
-Training, evaluation and demo instructions are added here as each phase is completed.
+## Training
+All settings live in a YAML file in `configs/`. Quick end-to-end check on a Mac (200 pairs, 1 epoch, ~4 min):
+```bash
+python -m src.train --config configs/smoke_mac.yaml
+```
+Full training (meant for a Colab GPU; checkpoints go to `--output-dir`, default `./checkpoints`):
+```bash
+python -m src.train --config configs/base.yaml --output-dir /content/drive/MyDrive/medical-text-simplifier/checkpoints
+```
+Add `--resume` to continue an interrupted run. Small outputs (config, loss CSV and plot, summary, validation samples) go to `runs/<run_name>/`; model weights never go into git.
+
+Evaluation and demo instructions are added here as each phase is completed.
