@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (raw downloads are re-creatable with src/data/download.py)
+data/raw/
+
+# Model weights and checkpoints (kept on Google Drive / local disk, never in git)
+checkpoints/
+runs/**/checkpoint-*/
+*.safetensors
+*.bin
+*.pt
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
