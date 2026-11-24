@@ -8,7 +8,7 @@ Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS
 - [x] Phase 0 — Repository and requirements reference
 - [x] Phase 1 — Environment
 - [x] Phase 2 — Data acquisition and exploration
-- [ ] Phase 3 — Preprocessing and evaluation code
+- [x] Phase 3 — Preprocessing and evaluation code
 - [ ] Phase 4 — Fine-tuning pipeline (Mac smoke test)
 - [ ] Phase 5 — Full training on Google Colab
 - [ ] Phase 6 — Evaluation and analysis
@@ -35,5 +35,19 @@ python -m src.data.validate
 Exploration: [notebooks/01_data_exploration.ipynb](notebooks/01_data_exploration.ipynb).
 
 Dataset: Devaraj et al., *Paragraph-level Simplification of Medical Texts*, NAACL 2021 — [GitHub](https://github.com/AshOlogn/Paragraph-level-Simplification-of-Medical-Texts), CC BY 4.0.
+
+## Tests
+```bash
+python -m pytest -q tests
+```
+
+## Baselines (no training)
+```bash
+python -m src.eval.baselines --which copy
+```
+```bash
+python -m src.eval.baselines --which zeroshot
+```
+Results go to `runs/baseline_copy/` and `runs/baseline_zeroshot/` (`config.json`, `predictions.jsonl`, `metrics.json`).
 
 Training, evaluation and demo instructions are added here as each phase is completed.

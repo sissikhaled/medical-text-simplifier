@@ -1,0 +1,13 @@
+{
+  "sari": 41.81,
+  "bleu": 14.47,
+  "rouge1": 45.76,
+  "rouge2": 20.4,
+  "rougeL": 25.79,
+  "fkgl_prediction": 15.15,
+  "fkgl_source": 15.15,
+  "fkgl_reference": 13.63,
+  "words_prediction": 349.82,
+  "length_ratio": 1.0,
+  "n_examples": 480
+}

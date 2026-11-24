@@ -82,3 +82,54 @@ One entry per phase: what was done, why, decisions made, and results. This log i
 | Max input length | **1024** tokens (Colab) | Cuts only 2.5% of sources; 512 would cut 47%. The 512 setting stays as a planned variation to measure the effect. |
 | Max output length | **768** tokens (changed from 512) | 512 would cut the ending of 8.2% of training targets; 768 cuts 0.7%. Costs more memory, so gradient checkpointing may be needed on the T4. |
 | Unknown symbols | **Rewrite to ASCII words** in Phase 3, for sources and targets alike: `−`→`-`, `±`→`+/-`, `µ`/`μ`→`micro`, `α`→`alpha`, `β`→`beta`, `<`→`less than`, `≥`→`greater than or equal to`, `≤`→`less than or equal to`. Not `<=`, because `<` itself is not in the vocabulary. Target: almost no `<unk>` tokens left. | Keeps the meaning of statistics (*P < 0.05*) that would otherwise be lost. |
+
+## Phase 3 — Preprocessing and evaluation code (2026-11-24)
+
+**What:**
+- `src/data/preprocess.py`: `normalize_text()` rewrites characters FLAN-T5 cannot represent; `make_tokenize_fn()` adds the `simplify: ` prefix and tokenizes (inputs up to 1024 tokens, labels up to 768 tokens).
+- `src/eval/metrics.py`: `compute_all()` returns SARI, BLEU, ROUGE-1/2/L, FKGL of predictions/sources/references, mean output length and length ratio.
+- `src/generate.py`: shared batched generation (beam 4, `no_repeat_ngram_size=3`, up to 768 new tokens), reused later by evaluation and the demo.
+- `src/eval/baselines.py`: copy-input and zero-shot baselines on the test set, saved in `runs/baseline_*`.
+- `tests/`: 19 pytest tests (`python -m pytest -q tests`), all passing.
+- New pinned packages: `pytest==9.2.0`, `sacremoses==0.2.0` (required by the SARI implementation in `evaluate`).
+
+### Symbol normalization
+Applied identically to sources and targets, before training and before scoring:
+
+| Original | Becomes | | Original | Becomes |
+|---|---|---|---|---|
+| `<` | less than | | `−` `‒` `‐` | - |
+| `≤` | less than or equal to | | `μg` / `µg` | mcg |
+| `≥` | greater than or equal to | | `μ` / `µ` | micro |
+| `±` | +/- | | `α β γ δ κ ω` | alpha, beta, … |
+| `˜` `~` | approximately | | `·` between digits | . (decimal) |
+| `·` `▪` `∙` (bullets) | - | | `{ }` | ( ) |
+| `½` | 1/2 | | accented letters | unaccented (Å → A) |
+
+**Result:** `<unk>` tokens went from 2,208 to **0** in sources and from 179 to **0** in targets; a test checks that no unknown character is left in the whole dataset.
+
+**Bug caught by a test:** Unicode decomposition (NFKD) turns `˜` into a space plus an accent mark, and the accent-stripping step then deleted it, so "(˜60%)" became "( 60%)" and lost "approximately". `˜` and `´` are now replaced before decomposition.
+
+### Metric sanity check (3 hand-made sentence pairs, `tests/test_metrics.py`)
+| Prediction | SARI | BLEU | ROUGE-L | FKGL pred | FKGL source |
+|---|---|---|---|---|---|
+| = reference (perfect) | 100.00 | 100.00 | 100.00 | 7.63 | 20.22 |
+| = source (copy) | 37.35 | 2.49 | 20.55 | 20.22 | 20.22 |
+
+The metrics behave as expected: a perfect simplification gets 100, copying is penalized by SARI, and FKGL shows the readability gain.
+
+### Baselines on the test set (480 pairs, normalized text)
+| System | SARI | BLEU | ROUGE-1 | ROUGE-2 | ROUGE-L | FKGL output | Words | Length ratio |
+|---|---|---|---|---|---|---|---|---|
+| Copy input | 41.81 | 14.47 | 45.76 | 20.40 | 25.79 | 15.15 | 349.8 | 1.00 |
+| Zero-shot FLAN-T5-base | 33.63 | 0.46 | 21.41 | 8.24 | 14.29 | 13.99 | 44.3 | 0.15 |
+| *Reference summaries* | – | – | – | – | – | *13.63* | – | – |
+
+Source FKGL on the test set: 15.15.
+
+Zero-shot used the instruction *"Rewrite the following medical text in plain language that a patient without medical training can understand:"*. It needed 34.7 min on the M2 (MPS, batch 4, beam 4).
+
+### Observations
+- **Zero-shot does not simplify, it shortens.** Given an instruction, FLAN-T5 mostly returns one key sentence from the abstract (about 44 words, 15% of the input length) with the jargon intact. The lower FKGL (13.99) comes from short output, not plain wording.
+- **Copy-input scores a fairly high SARI (41.8) at paragraph level.** With one long reference, SARI's "keep" component rewards keeping the many words the source and reference share. A fine-tuned model must therefore beat **41.8**, not just the zero-shot 33.6, to show real simplification. This is a known limitation of SARI on long texts and worth discussing in the report.
+- BLEU and ROUGE against a single human summary are low even for the copy baseline. Many different good simplifications exist, so these scores are best read as relative comparisons.

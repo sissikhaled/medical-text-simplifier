@@ -1,0 +1,16 @@
+{
+  "system": "zero-shot",
+  "model": "google/flan-t5-base",
+  "prompt": "Rewrite the following medical text in plain language that a patient without medical training can understand:\n\n{text}",
+  "generation": {
+    "num_beams": 4,
+    "no_repeat_ngram_size": 3,
+    "max_new_tokens": 768,
+    "early_stopping": true
+  },
+  "batch_size": 4,
+  "device": "mps",
+  "split": "test",
+  "n_examples": 480,
+  "generation_minutes": 34.7
+}

@@ -1,0 +1,5 @@
+{
+  "system": "copy-input",
+  "split": "test",
+  "n_examples": 480
+}

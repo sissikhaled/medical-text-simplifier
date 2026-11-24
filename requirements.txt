@@ -17,7 +17,11 @@ pyyaml==6.0.4
 evaluate==0.4.6
 sacrebleu==2.6.0
 rouge_score==0.1.2
+sacremoses==0.2.0    # needed by the evaluate SARI metric
 textstat==0.7.13
+
+# Tests
+pytest==9.2.0
 
 # Plots, notebooks, demo
 matplotlib==3.11.2

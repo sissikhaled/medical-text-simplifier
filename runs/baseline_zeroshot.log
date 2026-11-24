@@ -1,0 +1,30 @@
+W1124 16:49:53.531000 92061 .venv/lib/python3.13/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+Loading weights:   0%|          | 0/282 [00:00<?, ?it/s]Loading weights: 100%|██████████| 282/282 [00:00<00:00, 4090.82it/s]
+[transformers] The tied weights mapping and config for this model specifies to tie shared.weight to lm_head.weight, but both are present in the checkpoints with different values, so we will NOT tie them. You should update the config with `tie_word_embeddings=False` to silence this warning.
+Zero-shot google/flan-t5-base on mps, 480 examples
+  batch 10/120  elapsed 3.8 min  eta 42.3 min
+  batch 20/120  elapsed 8.4 min  eta 42.0 min
+  batch 30/120  elapsed 12.3 min  eta 37.0 min
+  batch 40/120  elapsed 15.2 min  eta 30.4 min
+  batch 50/120  elapsed 19.0 min  eta 26.6 min
+  batch 60/120  elapsed 21.9 min  eta 21.9 min
+  batch 70/120  elapsed 24.1 min  eta 17.2 min
+  batch 80/120  elapsed 27.2 min  eta 13.6 min
+  batch 90/120  elapsed 29.2 min  eta 9.7 min
+  batch 100/120  elapsed 31.5 min  eta 6.3 min
+  batch 110/120  elapsed 33.3 min  eta 3.0 min
+  batch 120/120  elapsed 34.7 min  eta 0.0 min
+
+baseline_zeroshot: {
+  "sari": 33.63,
+  "bleu": 0.46,
+  "rouge1": 21.41,
+  "rouge2": 8.24,
+  "rougeL": 14.29,
+  "fkgl_prediction": 13.99,
+  "fkgl_source": 15.15,
+  "fkgl_reference": 13.63,
+  "words_prediction": 44.3,
+  "length_ratio": 0.15,
+  "n_examples": 480
+}
