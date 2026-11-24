@@ -16,6 +16,8 @@ Usage:
     python -m src.train --config configs/smoke_mac.yaml
     python -m src.train --config configs/base.yaml --output-dir /content/drive/MyDrive/mts
     python -m src.train --config configs/base.yaml --resume   # continue an interrupted run
+    # Colab: keep both checkpoints and run files on Google Drive
+    python -m src.train --config configs/base.yaml --output-dir $DRIVE/checkpoints --runs-dir $DRIVE/runs
 """
 
 from __future__ import annotations
@@ -174,9 +176,9 @@ def plot_losses(csv_path: Path, out_path: Path, run_name: str) -> None:
 
 # --------------------------------------------------------------------------- main
 
-def train(cfg: dict, output_dir: Path, resume: bool) -> dict:
+def train(cfg: dict, output_dir: Path, resume: bool, runs_dir: Path = RUNS) -> dict:
     set_seed(cfg.get("seed", 42))
-    run_dir = RUNS / cfg["run_name"]
+    run_dir = runs_dir / cfg["run_name"]
     ckpt_dir = output_dir / cfg["run_name"]
     if not resume:
         for stale in (run_dir / "log_history.csv",):
@@ -301,7 +303,7 @@ def write_val_samples(model_dir: Path, rows: Dataset, out: Path, cfg: dict) -> N
         for r, p in zip(rows, preds):
             f.write(json.dumps({"id": r["id"], "source": r["source"], "reference": r["target"],
                                 "prediction": p}, ensure_ascii=False) + "\n")
-    print(f"\nwrote {len(preds)} validation samples to {out.relative_to(ROOT)}")
+    print(f"\nwrote {len(preds)} validation samples to {display_path(out)}")
     print("first sample:\n", preds[0][:600])
 
 
@@ -313,8 +315,11 @@ def main() -> int:
     parser.add_argument("--resume", action="store_true",
                         help="continue from the latest checkpoint in the output dir. Note: the "
                              "early-stopping patience counter restarts from 0.")
+    parser.add_argument("--runs-dir", type=Path, default=RUNS,
+                        help="where the small run files go (default: ./runs). On Colab, point "
+                             "this to Google Drive so they survive a disconnect.")
     args = parser.parse_args()
-    train(load_config(args.config), args.output_dir, args.resume)
+    train(load_config(args.config), args.output_dir, args.resume, args.runs_dir)
     return 0
 
 

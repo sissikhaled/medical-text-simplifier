@@ -1,0 +1,33 @@
+# Variation (b): inputs truncated to 512 tokens (cuts 47% of sources). Everything else = base.yaml.
+run_name: flan-t5-base_lr3e-4_src512
+model_name: google/flan-t5-base
+seed: 42
+
+# Data (Phase 2: 1024 cuts 2.5% of sources, 768 cuts 0.7% of targets)
+prefix: "simplify: "
+max_source_tokens: 512
+max_target_tokens: 768
+
+# Optimization
+learning_rate: 3.0e-4
+optim: adamw_torch
+weight_decay: 0.01
+lr_scheduler_type: linear
+warmup_steps: 0.05            # float < 1 = fraction of total steps (5%)
+max_grad_norm: 1.0
+num_train_epochs: 10
+per_device_train_batch_size: 4
+per_device_eval_batch_size: 4
+gradient_accumulation_steps: 4   # effective batch = 16
+early_stopping_patience: 2       # stop after 2 epochs without val-loss improvement
+
+# Memory / precision
+activation_checkpointing: true   # long sequences on a 16 GB T4
+precision: auto                  # bf16 only on GPUs with native support; T4 -> fp32
+
+# Checkpoints: full state (incl. optimizer) so a disconnected Colab session can resume
+save_only_model: false
+
+# Logging
+logging_steps: 10
+val_samples: 5

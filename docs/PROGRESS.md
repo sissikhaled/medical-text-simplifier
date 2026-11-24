@@ -176,3 +176,34 @@ Zero-shot used the instruction *"Rewrite the following medical text in plain lan
 **Cost estimate:** at the Mac's speed, a full epoch with 1024-token inputs would take roughly 2–3 hours, so a 10-epoch run would not be practical. This confirms full training belongs on Colab.
 
 **Disk:** a weights-only checkpoint of flan-t5-base is 947 MB; a full checkpoint with optimizer state is about 3 GB. The smoke checkpoints were deleted after verification.
+
+## Phase 5 — Colab training setup (2026-11-24)
+
+**Repository:** published at https://github.com/sissikhaled/medical-text-simplifier (public), so Colab can clone it.
+- Before publishing, absolute local paths were removed from saved run files; `src/train.py` now writes paths relative to the repo.
+- Commits use the author's university address.
+
+**What:**
+- `notebooks/02_train_colab.ipynb`: runs `src/train.py` on a Colab GPU.
+  1. Checks the GPU and mounts Google Drive.
+  2. Clones the repo and installs the pinned packages, except torch, pandas, matplotlib, jupyter and gradio, which Colab already provides.
+  3. Trains, shows the summary, loss curve and a validation sample, optionally frees Drive space, and downloads the run files as a zip.
+- `src/train.py --runs-dir`: on Colab the small run files go to Drive next to the checkpoints, so nothing is lost on a disconnect.
+- Two variation configs:
+
+| Config | Run name | Change vs. base | Question it answers |
+|---|---|---|---|
+| `base.yaml` | `flan-t5-base_lr3e-4_src1024` | – | main model |
+| `lr1e-4.yaml` | `flan-t5-base_lr1e-4_src1024` | learning rate 1e-4 | does a smaller learning rate train more stably or generalize better? |
+| `src512.yaml` | `flan-t5-base_lr3e-4_src512` | inputs cut at 512 tokens | how much does seeing the full abstract matter? (512 cuts 47% of sources) |
+
+The third planned variation, greedy vs. beam-search decoding, needs no retraining and is done in Phase 6 on the best model.
+
+### Safeguards in the notebook
+- **Auto-resume.** If the run has a checkpoint on Drive, *Run all* continues from it. Tested locally: a run stopped after epoch 1 resumed at step 4, finished epoch 2, and appended to the same loss log. Note: after a resume, the early-stopping patience counter starts again from 0.
+- **No accidental retraining.** A finished run (one with `train_summary.json`) is skipped unless `RETRAIN = True`.
+- **Out of memory.** `LOW_MEMORY = True` switches to batch 2 × 8 accumulation steps, which keeps the effective batch of 16, so results stay comparable.
+- **Drive space.** Full checkpoints are about 3 GB each. Once a run has finished, an optional cell deletes them and keeps `best/` (about 1 GB). It refuses if training has not finished.
+
+### How results come back
+The notebook downloads `<run_name>.zip`. The unzipped folder goes into `runs/` locally and is committed. The `best/` model stays on Drive and is used for evaluation in Phase 6.

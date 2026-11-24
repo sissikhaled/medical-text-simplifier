@@ -59,6 +59,14 @@ Full training (meant for a Colab GPU; checkpoints go to `--output-dir`, default 
 ```bash
 python -m src.train --config configs/base.yaml --output-dir /content/drive/MyDrive/medical-text-simplifier/checkpoints
 ```
-Add `--resume` to continue an interrupted run. Small outputs (config, loss CSV and plot, summary, validation samples) go to `runs/<run_name>/`; model weights never go into git.
+Add `--resume` to continue an interrupted run, and `--runs-dir` to choose where the small run files go.
+
+**On Google Colab:** open [notebooks/02_train_colab.ipynb](notebooks/02_train_colab.ipynb) ([Open in Colab](https://colab.research.google.com/github/sissikhaled/medical-text-simplifier/blob/main/notebooks/02_train_colab.ipynb)), choose the T4 GPU runtime, pick a config in the Settings cell and *Run all*. Checkpoints and run files are saved to Google Drive, and an interrupted run resumes automatically.
+
+| Config | Run name | What changes |
+|---|---|---|
+| `configs/base.yaml` | `flan-t5-base_lr3e-4_src1024` | main run |
+| `configs/lr1e-4.yaml` | `flan-t5-base_lr1e-4_src1024` | learning rate 1e-4 |
+| `configs/src512.yaml` | `flan-t5-base_lr3e-4_src512` | inputs truncated to 512 tokens | Small outputs (config, loss CSV and plot, summary, validation samples) go to `runs/<run_name>/`; model weights never go into git.
 
 Evaluation and demo instructions are added here as each phase is completed.
