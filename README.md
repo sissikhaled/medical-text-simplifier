@@ -7,7 +7,7 @@ Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS
 ## Status
 - [x] Phase 0 — Repository and requirements reference
 - [x] Phase 1 — Environment
-- [ ] Phase 2 — Data acquisition and exploration
+- [x] Phase 2 — Data acquisition and exploration
 - [ ] Phase 3 — Preprocessing and evaluation code
 - [ ] Phase 4 — Fine-tuning pipeline (Mac smoke test)
 - [ ] Phase 5 — Full training on Google Colab
@@ -23,5 +23,17 @@ pip install -r requirements.txt
 python scripts/check_env.py   # should end with "Environment ready."
 ```
 On Google Colab, PyTorch is preinstalled with CUDA; the Colab notebook installs every other package from `requirements.txt`.
+
+## Data
+The processed splits are already in `data/processed/` (`train` 3,567, `val` 411, `test` 480 pairs; JSONL with `id`, `source`, `target`). To rebuild them from the authors' repository (pinned commit) and re-check them:
+```bash
+python -m src.data.download
+```
+```bash
+python -m src.data.validate
+```
+Exploration: [notebooks/01_data_exploration.ipynb](notebooks/01_data_exploration.ipynb).
+
+Dataset: Devaraj et al., *Paragraph-level Simplification of Medical Texts*, NAACL 2021 — [GitHub](https://github.com/AshOlogn/Paragraph-level-Simplification-of-Medical-Texts), CC BY 4.0.
 
 Training, evaluation and demo instructions are added here as each phase is completed.
