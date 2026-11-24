@@ -1,0 +1,25 @@
+# Pinned versions verified on macOS (Apple M2, Python 3.13) on 2026-11-24.
+# On Google Colab, torch is already installed with CUDA support: install
+# everything except the torch line (the Colab notebook does this for you).
+
+# Deep learning
+torch==2.15.0
+transformers==5.24.0
+accelerate==1.16.0
+sentencepiece==0.2.3
+
+# Data
+datasets==5.2.0
+pandas==3.1.1
+pyyaml==6.0.4
+
+# Evaluation
+evaluate==0.4.6
+sacrebleu==2.6.0
+rouge_score==0.1.2
+textstat==0.7.13
+
+# Plots, notebooks, demo
+matplotlib==3.11.2
+jupyter==1.1.1
+gradio==6.32.0
