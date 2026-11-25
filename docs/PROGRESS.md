@@ -229,3 +229,32 @@ The notebook downloads `<run_name>.zip`. The unzipped folder goes into `runs/` l
 - Early stopping ended training after epoch 6 (two epochs without improvement), out of a maximum of 10. The best model is the epoch-4 checkpoint, saved as `best/` on Drive.
 - Training loss per batch fell from 2.56 to about 1.6, while validation loss flattened at about 1.85 from epoch 4. The growing gap after epoch 4 is the start of overfitting, which is what early stopping is for.
 - Validation samples (`val_samples.jsonl`, 5 examples): the output is fluent and faithful to the source, and uses the Cochrane plain-summary style ("We included 12 studies…", "This review found…"). But it is still largely **extractive**: it often copies sentences from the abstract, keeps jargon (aminotransferases, risk ratios, attrition bias, "BF"), and one sample copies the numerical results section almost unchanged. How much it actually simplifies (SARI, FKGL) is measured on the test set in Phase 6.
+
+### Run 2 — variation (a) `flan-t5-base_lr1e-4_src1024` (2026-11-25)
+Same as the main run except learning rate 1e-4 instead of 3e-4.
+
+**Validation loss per epoch, compared with the main run:**
+
+| Epoch | Main (lr 3e-4) | Variation (lr 1e-4) |
+|---|---|---|
+| 1 | 1.9357 | 1.9908 |
+| 2 | 1.8913 | 1.9389 |
+| 3 | 1.8684 | 1.9065 |
+| 4 | **1.8479** (best) | 1.8902 |
+| 5 | 1.8482 | 1.8812 |
+| 6 | 1.8546 (stopped) | 1.8724 |
+| 7 | – | 1.8648 |
+| 8 | – | 1.8665 |
+| 9 | – | **1.8562** (best) |
+| 10 | – | 1.8562 |
+
+- **The smaller learning rate learns more slowly and ends slightly worse.** It needed all 10 epochs to reach 1.856, still above the main run's 1.848 after 4 epochs. Early stopping never triggered: it reached the 10-epoch limit while still improving very slightly.
+- The gap between training loss (about 1.72 in epoch 10) and validation loss (1.856) stayed smaller than in the main run, so it overfits less. But it never reached a lower validation loss.
+- Cost: about 6 GPU hours (10 epochs × ~37 min) vs. 3.5 hours for the main run.
+- Conclusion: **3e-4 is the better learning rate** for this model and data. It gives a lower validation loss in less than half the time.
+- The validation samples are similar in style, and just as extractive as the main run's (one copies a statistics passage with confidence intervals).
+
+**Incident: the resume after epoch 5 restarted the learning-rate schedule.** The Colab session ended after epoch 5, and *Run all* resumed from `checkpoint-1115`. The loss log shows the learning rate jumping from 5.3e-5 down to 3.6e-6 and warming up again to 1e-4. So the scheduler, and almost certainly the AdamW optimizer state, were created fresh instead of being restored.
+- Cause: transformers restores the optimizer and scheduler only if *both* `optimizer.pt` and `scheduler.pt` are in the checkpoint. Otherwise it silently starts new ones. The same resume works correctly locally: a simulated crash plus resume continues the schedule exactly. The most likely explanation is that the session died before Google Drive had uploaded the 2 GB `optimizer.pt`, while the small `trainer_state.json` (which restores the step counter) had already arrived.
+- Effect on this run: epochs 6–10 ran with a learning rate decaying from 1e-4 to 5.3e-5, instead of from 5.3e-5 to 0 (a "warm restart"). Validation loss kept improving after the restart (1.881 → 1.856), so the run is usable. But strictly it is "lr 1e-4 with a warm restart at epoch 5", not a clean single linear schedule. It was not rerun because of the limited free GPU time. The conclusion that 3e-4 is better is unlikely to change: with the planned schedule, epochs 6–10 would have used even smaller learning rates.
+- Fix: `src/train.py --resume` now resumes only from a checkpoint that has every file needed for an exact resume (`trainer_state.json`, `model.safetensors`, `optimizer.pt`, `scheduler.pt`, `rng_state.pth`). It falls back to an older complete checkpoint, or stops with a clear error, and records `resumed_from` in `train_summary.json`. Tested with `tests/test_resume.py` and a local crash/resume simulation in which `optimizer.pt` was deleted.

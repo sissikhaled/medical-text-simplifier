@@ -65,6 +65,28 @@ def display_path(path: str | Path | None) -> str | None:
 
 # --------------------------------------------------------------------------- config
 
+# Files a checkpoint needs for an exact resume. If optimizer.pt or scheduler.pt
+# is missing, transformers silently starts a NEW optimizer and learning-rate
+# schedule (warm-up from 0 again). This happened once on Colab, when the session
+# died before Google Drive finished uploading the 2 GB optimizer file.
+RESUME_FILES = ("trainer_state.json", "model.safetensors", "optimizer.pt", "scheduler.pt",
+                "rng_state.pth")
+
+
+def latest_complete_checkpoint(ckpt_dir: Path) -> Path | None:
+    """Newest checkpoint-<step> folder that has every file in RESUME_FILES (non-empty)."""
+    ckpts = [d for d in Path(ckpt_dir).glob("checkpoint-*")
+             if d.is_dir() and d.name.split("-")[-1].isdigit()]
+    for ckpt in sorted(ckpts, key=lambda d: int(d.name.split("-")[-1]), reverse=True):
+        missing = [f for f in RESUME_FILES
+                   if not (ckpt / f).is_file() or (ckpt / f).stat().st_size == 0]
+        if not missing:
+            return ckpt
+        print(f"WARNING: skipping incomplete checkpoint {ckpt.name} (missing or empty: "
+              f"{', '.join(missing)})")
+    return None
+
+
 def load_config(path: Path) -> dict:
     with path.open() as f:
         cfg = yaml.safe_load(f)
@@ -250,7 +272,16 @@ def train(cfg: dict, output_dir: Path, resume: bool, runs_dir: Path = RUNS) -> d
     )
 
     start = time.time()
-    trainer.train(resume_from_checkpoint=True if resume else None)
+    resume_from = None
+    if resume:
+        resume_from = latest_complete_checkpoint(ckpt_dir)
+        if resume_from is None:
+            raise SystemExit(
+                f"--resume: no complete checkpoint in {ckpt_dir} (each needs "
+                f"{', '.join(RESUME_FILES)}). Delete the checkpoint folders and train again "
+                "without --resume.")
+        print(f"Resuming from {resume_from.name}")
+    trainer.train(resume_from_checkpoint=str(resume_from) if resume_from else None)
     minutes = (time.time() - start) / 60
 
     # Save the best model (already loaded by load_best_model_at_end).
@@ -278,6 +309,7 @@ def train(cfg: dict, output_dir: Path, resume: bool, runs_dir: Path = RUNS) -> d
         "best_model_dir": display_path(best_dir),
         "best_checkpoint": display_path(trainer.state.best_model_checkpoint),
         "resumed": resume,
+        "resumed_from": resume_from.name if resume_from else None,
     }
     (run_dir / "train_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
