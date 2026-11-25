@@ -207,3 +207,25 @@ The third planned variation, greedy vs. beam-search decoding, needs no retrainin
 
 ### How results come back
 The notebook downloads `<run_name>.zip`. The unzipped folder goes into `runs/` locally and is committed. The `best/` model stays on Drive and is used for evaluation in Phase 6.
+
+### Run 1 — main config `flan-t5-base_lr3e-4_src1024` (2026-11-24/25)
+**Environment on Colab:** Tesla T4, fp32 (T4 has no bf16), torch 2.14.1+cu130 (Colab's own build; the Mac has 2.15.0), transformers 5.24.0, datasets 5.2.0.
+- pip reports a conflict between Colab's preinstalled `cudf` and the newer `pyarrow` that `datasets` needs. It is harmless: `cudf` is not used.
+- Batch 4 × 4 accumulation fit in T4 memory, so `LOW_MEMORY` was not needed.
+
+**Speed:** about 9.1 s per optimizer step, 223 steps per epoch, so roughly 35 min per epoch including validation. Total 210.7 min for 6 epochs. No disconnects, no resume.
+
+**Result** (`runs/flan-t5-base_lr3e-4_src1024/`):
+
+| Epoch | Validation loss |
+|---|---|
+| 1 | 1.9357 |
+| 2 | 1.8913 |
+| 3 | 1.8684 |
+| **4** | **1.8479** (best, perplexity 6.35) |
+| 5 | 1.8482 |
+| 6 | 1.8546 |
+
+- Early stopping ended training after epoch 6 (two epochs without improvement), out of a maximum of 10. The best model is the epoch-4 checkpoint, saved as `best/` on Drive.
+- Training loss per batch fell from 2.56 to about 1.6, while validation loss flattened at about 1.85 from epoch 4. The growing gap after epoch 4 is the start of overfitting, which is what early stopping is for.
+- Validation samples (`val_samples.jsonl`, 5 examples): the output is fluent and faithful to the source, and uses the Cochrane plain-summary style ("We included 12 studies…", "This review found…"). But it is still largely **extractive**: it often copies sentences from the abstract, keeps jargon (aminotransferases, risk ratios, attrition bias, "BF"), and one sample copies the numerical results section almost unchanged. How much it actually simplifies (SARI, FKGL) is measured on the test set in Phase 6.

@@ -1,0 +1,15 @@
+{
+  "run_name": "flan-t5-base_lr3e-4_src1024",
+  "best_eval_loss": 1.847910761833191,
+  "best_epoch": 4.0,
+  "best_eval_perplexity": 6.346546215299375,
+  "epochs_completed": 6.0,
+  "global_steps": 1338,
+  "stopped_early": true,
+  "train_minutes": 210.7,
+  "device": "cuda",
+  "bf16": false,
+  "best_model_dir": "/content/drive/MyDrive/medical-text-simplifier/checkpoints/flan-t5-base_lr3e-4_src1024/best",
+  "best_checkpoint": "/content/drive/MyDrive/medical-text-simplifier/checkpoints/flan-t5-base_lr3e-4_src1024/checkpoint-892",
+  "resumed": false
+}

@@ -1,0 +1,25 @@
+run_name: flan-t5-base_lr3e-4_src1024
+model_name: google/flan-t5-base
+seed: 42
+prefix: 'simplify: '
+max_source_tokens: 1024
+max_target_tokens: 768
+learning_rate: 0.0003
+optim: adamw_torch
+weight_decay: 0.01
+lr_scheduler_type: linear
+warmup_steps: 0.05
+max_grad_norm: 1.0
+num_train_epochs: 10
+per_device_train_batch_size: 4
+per_device_eval_batch_size: 4
+gradient_accumulation_steps: 4
+early_stopping_patience: 2
+activation_checkpointing: true
+precision: auto
+save_only_model: false
+logging_steps: 10
+val_samples: 5
+resolved_device: cuda
+resolved_bf16: false
+checkpoint_dir: /content/drive/MyDrive/medical-text-simplifier/checkpoints/flan-t5-base_lr3e-4_src1024
