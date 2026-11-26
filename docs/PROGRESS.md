@@ -286,3 +286,31 @@ The run was clean: no disconnects, no resume, and a smooth learning-rate schedul
 | `flan-t5-base_lr3e-4_src512` | 3e-4 | 512 | 1.929 (4) | 6, early stop | 2.7 h |
 
 **Selected model: the main run** (`checkpoints/flan-t5-base_lr3e-4_src1024/best` on Drive). It has the lowest validation loss and is the cheapest of the 1024-token runs. Test-set metrics for all three, plus the greedy vs. beam-search comparison, follow in Phase 6.
+
+## Phase 6 — Evaluation on the test set (started 2026-11-26)
+
+**What:**
+- `src/evaluate_model.py`: generates a simplification for each of the 480 test abstracts with a trained model, then computes every metric. Output goes to `runs/<run>/test_<decoding>/`.
+  - It reads the prefix and input length from the run's own `config.yaml`, so the 512-token model is tested with 512-token inputs, the way it was trained.
+  - Progress is saved every 20 examples, and the same command continues after an interruption (tested: the resumed output is identical). A finished evaluation is not generated again.
+  - `--decoding beam4|greedy`. The two differ only in the search: beam search keeps the 4 most likely partial outputs, greedy keeps only the single most likely next word. Everything else (`no_repeat_ngram_size=3`, 768 new tokens) is the same.
+- `notebooks/03_evaluate_colab.ipynb`: the same evaluation on a Colab GPU, reading the model from Drive.
+- `src/eval/rescore.py`: recomputes `metrics.json` from saved predictions after the metric code changes.
+
+**Two new metrics** (`src/eval/metrics.py`). These quantify what the validation samples suggested in Phase 5:
+- **Copied trigrams:** the share of the output's 3-word phrases that appear word for word in the source. It measures how *extractive* (copy-and-paste) a system is.
+- **Unsupported numbers:** the share of the numbers in the outputs that appear nowhere in the source. It is a simple proxy for invented statistics. Number formats are normalized ("10,056" = "10056"); spelled-out numbers ("four") are not counted.
+
+Both are also computed for the human reference summaries.
+
+**Baselines rescored with the new metrics** (no new generation):
+
+| System | Copied trigrams | Unsupported numbers |
+|---|---|---|
+| Copy input | 100 | 0 |
+| Zero-shot FLAN-T5 | 84.2 | 2.2 |
+| Human reference | **17.4** | **34.7** |
+
+**Findings:**
+1. **The human writers rewrite heavily.** Only 17% of their 3-word phrases are copied from the abstract. So the heavy copying seen in the Phase 5 validation samples is a model behavior, not something the references show it. (This corrects an earlier assumption that the summaries mostly reuse abstract sentences.)
+2. **About a third of the numbers in the human summaries are not in the abstract.** The Cochrane plain-language summaries were written from the full review, not from the abstract alone, so they contain facts the model cannot see in its input. Some of these are only reformulations (rounded percentages, "four" written as a digit), but the gap is large. Training on these pairs partly rewards writing numbers that are not in the input. This is a plausible contributor to invented statistics, together with input truncation (see run 3).

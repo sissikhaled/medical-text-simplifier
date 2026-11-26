@@ -54,6 +54,21 @@ def test_simplification_is_easier_to_read(perfect):
     assert perfect["fkgl_prediction"] < perfect["fkgl_source"]
 
 
+def test_copy_is_fully_extractive(copy):
+    assert copy["copied_trigrams"] == 100
+    assert copy["unsupported_numbers"] == 0
+
+
+def test_unsupported_numbers_detects_invented_figures():
+    from src.eval.metrics import unsupported_numbers
+    src = ["We included 4 studies with 171 patients (95% CI 1.2 to 2.3)."]
+    assert unsupported_numbers(src, ["Four studies, 171 patients, 95% CI 1.2 to 2.3."]) == 0
+    # 27 and 78 are invented; 171 is supported -> 2 of 3 numbers unsupported
+    assert unsupported_numbers(src, ["27 studies, 78 patients, 171 in total."]) == pytest.approx(200 / 3)
+    assert unsupported_numbers(src, ["10,056 women"]) == 100
+    assert unsupported_numbers(["10,056 women"], ["10056 women"]) == 0
+
+
 def test_length_mismatch_raises():
     with pytest.raises(ValueError):
         compute_all(SOURCES, REFERENCES[:2], REFERENCES)

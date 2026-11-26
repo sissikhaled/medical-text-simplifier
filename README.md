@@ -71,4 +71,18 @@ Add `--resume` to continue an interrupted run, and `--runs-dir` to choose where 
 
 Small outputs (config, loss CSV and plot, summary, validation samples) go to `runs/<run_name>/`; model weights never go into git.
 
-Evaluation and demo instructions are added here as each phase is completed.
+## Evaluation on the test set
+Needs a trained model: the run's `best/` folder from Google Drive (`MyDrive/medical-text-simplifier/checkpoints/<run_name>/best`, about 1 GB). Put it in `models/<run_name>/` (ignored by git), then:
+```bash
+python -m src.evaluate_model --run flan-t5-base_lr3e-4_src1024 --model-dir models/flan-t5-base_lr3e-4_src1024
+```
+Add `--decoding greedy` for the decoding comparison and `--limit 8` for a quick check. Results go to `runs/<run_name>/test_<decoding>/` (`predictions.jsonl`, `metrics.json`, `config.json`). Progress is saved every 20 examples, so the same command continues an interrupted evaluation. On a Mac, prefix it with `caffeinate -i` so the computer does not sleep.
+
+On Colab: [notebooks/03_evaluate_colab.ipynb](notebooks/03_evaluate_colab.ipynb) ([Open in Colab](https://colab.research.google.com/github/sissikhaled/medical-text-simplifier/blob/main/notebooks/03_evaluate_colab.ipynb)) reads the model straight from Drive.
+
+After a change to the metric code, recompute saved results without generating again:
+```bash
+python -m src.eval.rescore runs/baseline_copy runs/baseline_zeroshot
+```
+
+Demo instructions are added here when that phase is completed.

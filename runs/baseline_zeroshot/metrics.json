@@ -9,5 +9,9 @@
   "fkgl_reference": 13.63,
   "words_prediction": 44.3,
   "length_ratio": 0.15,
+  "copied_trigrams": 84.2,
+  "copied_trigrams_reference": 17.39,
+  "unsupported_numbers": 2.2,
+  "unsupported_numbers_reference": 34.67,
   "n_examples": 480
 }

@@ -21,3 +21,6 @@ runs/**/checkpoint-*/
 .DS_Store
 .vscode/
 .idea/
+
+# trained models downloaded from Google Drive for evaluation / the demo
+models/
