@@ -31,10 +31,17 @@ This file is the reference for the course requirements. Every phase of the proje
 | Project | **Medical text simplifier**: rewrites medical research text into plain language patients can understand. |
 | Grade tier | **Grade 5** — fine-tuning a pre-trained Transformer (`google/flan-t5-base`, an encoder-decoder conditioned on the input text). |
 | Dataset | Cochrane plain-language-summary corpus (Devaraj et al., NAACL 2021): medical abstracts paired with plain-language summaries, available online. |
-| Evaluation | SARI, ROUGE-L, BLEU, Flesch-Kincaid Grade Level (readability). |
+| Evaluation | SARI (with its keep / delete / add parts), ROUGE, BLEU, Flesch-Kincaid Grade Level (readability), plus copied trigrams and numbers not found in the source. |
 | Demo | Gradio web app. |
+
+### Status (core project complete, 2026-11-26)
+- [x] **Grade 5:** pre-trained Transformer (FLAN-T5-base) fine-tuned for conditional text generation (`src/train.py`, `notebooks/02_train_colab.ipynb`).
+- [x] **Dataset available online:** Cochrane corpus from the authors' GitHub repository, pinned commit (`src/data/download.py`).
+- [x] **Experiments:** 3 training configurations (learning rate 3e-4 vs. 1e-4; input 1024 vs. 512 tokens) and 2 decoding methods (beam 4 vs. greedy), compared with 2 baselines on the test set, with bootstrap significance tests.
+- [x] **Results and discussion:** `docs/PROGRESS.md` (Phases 5–7), `notebooks/04_results.ipynb`, figures in `docs/figures/`.
+- [x] **Demo:** `app/app.py`.
 
 ### Deferred until the core project is done
 - [ ] Optional report (training methodology, hyperparameters, results, discussion) — material is collected along the way in `docs/PROGRESS.md`.
 - [ ] Extra bonus: hybrid model.
-- [ ] Extra bonus: novel evaluation metric or visualization (e.g., attention heatmaps).
+- [ ] Extra bonus: novel evaluation metric or visualization (e.g., attention heatmaps). Already in place and usable for this item: the SARI keep / delete / add breakdown, the copied-trigrams and unsupported-numbers measures (`src/eval/metrics.py`), and eager attention in training, so attention weights can be extracted for heatmaps.

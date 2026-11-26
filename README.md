@@ -4,16 +4,25 @@ Rewrites medical research text (abstracts written for doctors and scientists) in
 
 Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) for the requirements and [docs/PROGRESS.md](docs/PROGRESS.md) for the step-by-step log.
 
-## Status
-- [x] Phase 0 — Repository and requirements reference
-- [x] Phase 1 — Environment
-- [x] Phase 2 — Data acquisition and exploration
-- [x] Phase 3 — Preprocessing and evaluation code
-- [x] Phase 4 — Fine-tuning pipeline (Mac smoke test)
-- [x] Phase 5 — Full training on Google Colab
-- [x] Phase 6 — Evaluation and analysis
-- [x] Phase 7 — Gradio demo
-- [ ] Phase 8 — Wrap-up
+## At a glance
+| | |
+|---|---|
+| Task | Paragraph-level simplification: medical review abstract → plain-language summary |
+| Model | `google/flan-t5-base` (250M parameters, encoder-decoder Transformer), fully fine-tuned |
+| Data | Cochrane abstracts paired with plain-language summaries: 3,567 train / 411 validation / 480 test |
+| Training | 3 runs on Google Colab (T4 GPU): main configuration + learning-rate and input-length variations |
+| Evaluation | SARI (and its keep / delete / add parts), BLEU, ROUGE, FKGL readability, plus two added measures: copied trigrams and numbers not found in the source |
+| Demo | Local Gradio app with readability statistics and a warning for numbers not found in the input |
+
+**Main findings** (test set; details in [docs/PROGRESS.md](docs/PROGRESS.md), Phase 6):
+- Fine-tuning clearly improves on the untrained model: SARI 37.9 vs. 33.6 (bootstrap 95% interval of the difference +3.7 to +4.8), BLEU 14.8 vs. 0.5, and outputs of summary length.
+- The reading level drops by about one grade (FKGL 15.15 → 14.07), which closes about 70% of the gap to the human summaries. 77% of outputs are easier to read than their source.
+- The model simplifies mainly by **selecting and shortening**: 79% of its 3-word phrases are copied from the source, against 17% for the human writers.
+- **Copying the input scores the highest SARI (41.8)**, because the SARI implementation gives a perfect deletion score to a system that deletes nothing. On the keep and add parts of SARI, the fine-tuned model beats copying.
+- **Learning rate 3e-4 beat 1e-4**, and reading the full abstract (1024 tokens) beat cutting it at 512. On long abstracts the cut causes more numbers that are not in the source.
+- **Greedy decoding** reads easier and scores slightly higher SARI, but writes 4 times as many numbers that are not in the source, so beam search is the default.
+
+All phases (0–8) are complete; [docs/PROGRESS.md](docs/PROGRESS.md) logs each step, decision and result. The bonus items are listed in [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
 
 ## Setup (macOS / Linux)
 ```bash
@@ -107,3 +116,43 @@ Open http://127.0.0.1:7860, paste medical text (or click one of the test-set exa
 - a warning listing any numbers in the output that do not appear in the input.
 
 Beam search is the default. Greedy decoding is faster but invents numbers more often. The model was trained on research abstracts: on short clinical notes it mostly copies or drops sentences. **It is a research demo, not medical advice.**
+
+## Reproducing everything, in order
+1. Setup and tests (above).
+2. Data: `python -m src.data.download` and `python -m src.data.validate` (optional: the processed splits are committed).
+3. Baselines: `python -m src.eval.baselines --which all` (the zero-shot baseline takes about 35 min on an M2 Mac).
+4. Training: notebook 02 on Colab, once per config in `configs/` (2.5–6 GPU hours each on a T4).
+5. Test evaluation: notebook 03 on Colab (or `src/evaluate_model.py` locally), for each run, plus `--decoding greedy` for the main run.
+6. Analysis: [notebooks/04_results.ipynb](notebooks/04_results.ipynb) (reads only committed files; runs in seconds).
+7. Demo: `python -m app.app`.
+
+Training is seeded (seed 42), but GPU kernels are not bit-for-bit deterministic, so a retrained model can differ slightly. The committed predictions are the ones all reported numbers come from.
+
+## Project structure
+```
+configs/          training settings, one YAML per run (+ smoke_mac.yaml for a quick Mac test)
+data/processed/   train / val / test pairs (JSONL), built by src/data/download.py
+src/data/         download, validation, text normalization and tokenization
+src/eval/         metrics, readability (FKGL), baselines, rescoring
+src/train.py      fine-tuning with the Hugging Face Seq2SeqTrainer
+src/generate.py   shared text generation (beam search / greedy)
+src/evaluate_model.py   test-set generation and scoring (resumable)
+app/app.py        Gradio demo
+notebooks/        01 data exploration, 02 training (Colab), 03 evaluation (Colab), 04 results
+runs/             per-run outputs: configs, loss logs and plots, validation samples, test predictions and metrics
+docs/             requirements, progress log, results tables, figures
+tests/            unit tests (pytest)
+models/, checkpoints/   model weights (not in git; ~1 GB per model on Google Drive)
+```
+
+## Limitations
+- The model mostly selects and shortens sentences; it rarely replaces jargon with plain words, and its outputs stay at university reading level (as do the human summaries).
+- It can drop facts, change numbers or units, and misspell rare drug names (examples in PROGRESS, Phase 6). The demo's number check catches only invented numbers, not other errors.
+- A third of the numbers in the human summaries are not in the abstracts (the summaries were written from the full reviews), so the training data partly rewards writing facts that are not in the input.
+- It was trained on Cochrane review abstracts only; on clinical notes (diagnoses, prescriptions) it does not work well.
+- The evaluation is automatic (one reference per abstract). FKGL measures sentence and word length, not understanding, and no human judged the outputs.
+
+## Credits
+- Dataset: Ashwin Devaraj, Iain Marshall, Byron Wallace and Junyi Jessy Li, *Paragraph-level Simplification of Medical Texts*, NAACL 2021 ([repository](https://github.com/AshOlogn/Paragraph-level-Simplification-of-Medical-Texts), CC BY 4.0). The texts come from Cochrane systematic reviews.
+- Model: FLAN-T5 (Chung et al., *Scaling Instruction-Finetuned Language Models*, 2022), `google/flan-t5-base` on Hugging Face.
+- SARI: Xu et al., *Optimizing Statistical Machine Translation for Text Simplification*, TACL 2016 (Hugging Face `evaluate` implementation).

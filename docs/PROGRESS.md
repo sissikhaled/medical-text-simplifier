@@ -383,3 +383,54 @@ Three test-set abstracts (not seen in training) are built in as examples. They f
 - `tests/test_app.py` covers the numbers warning and the model-folder lookup (36 tests pass).
 
 **Observation (out of domain):** on a short clinical note ("acute exacerbation of COPD with hypoxaemia… commence nebulised salbutamol… prednisolone 40 mg for 5 days…") the model kept only the first two sentences, dropped the treatment plan entirely, and the output read *harder* (FKGL 12.5 → 14.1). It learned to summarize Cochrane review abstracts, not to explain clinical notes to patients. The demo says so. A model for clinical notes would need different training data (see the discussion of sentence-level datasets such as PLABA).
+
+## Phase 8 — Wrap-up (2026-11-26)
+
+**What:**
+- README rewritten as the project overview: results and findings at the top, then setup, data, training, evaluation, demo, a reproduction order, project structure, limitations and credits.
+- `docs/REQUIREMENTS.md`: status of each requirement. The bonus items are still open; the parts already in place for the "novel metrics / visualization" bonus are noted there.
+- Final checks on a fresh clone of the GitHub repository: tests, and that the results notebook runs from committed files only (see below).
+
+## Project summary (for the report)
+
+**Goal and approach.** Generate plain-language versions of medical research text by fine-tuning a pre-trained encoder-decoder Transformer, FLAN-T5-base, on the Cochrane paragraph-level simplification corpus: 4,458 abstract/summary pairs after removing one broken pair. This is the course's grade-5 tier (conditional generation with a fine-tuned pre-trained Transformer).
+
+**Pipeline.**
+1. Pinned data download with checks for splits, duplicates and leakage.
+2. Text normalization so the tokenizer has no unknown symbols.
+3. Training with the Hugging Face `Seq2SeqTrainer`: AdamW, linear schedule with 5% warm-up, effective batch 16, early stopping on validation loss, fp32.
+4. Generation with beam search.
+5. Automatic evaluation against two baselines.
+6. A local demo.
+
+Development and smoke tests ran on an M2 Mac; training and test generation ran on Colab T4 GPUs.
+
+**Experiments.**
+
+| Experiment | Result |
+|---|---|
+| Learning rate 3e-4 vs. 1e-4 | 3e-4: lower validation loss (1.848 vs. 1.856) in less than half the GPU time. Test SARI equal within noise. |
+| Inputs 1024 vs. 512 tokens | 1024: lower validation loss (1.848 vs. 1.929). On the 49% of test abstracts longer than 512 tokens, significantly higher SARI and fewer numbers not in the source. |
+| Beam 4 vs. greedy decoding | Greedy: +0.9 SARI and easier to read, but 4× more numbers not in the source. Beam kept as the default for faithfulness. |
+
+**Main results** (test set): SARI 37.9 (zero-shot 33.6, copy 41.8); FKGL 15.15 → 14.07 (human summaries 13.63); 79% copied trigrams (humans 17%); 2.8% unsupported numbers.
+
+**Discussion points.**
+1. **Fine-tuning works, but the model learned to *condense* more than to *rewrite*.** The training loss rewards predicting the reference word by word, so copying source words that also appear in the reference is a safe strategy. New plain wording is rare (SARI *add* 2.4).
+2. **The automatic metrics have limits at paragraph level.** SARI's 0/0 = 1 deletion score makes copying the best system on paper, and BLEU/ROUGE barely separate copying from simplifying. Breaking SARI into its parts and adding the copying and number measures gives a more truthful picture.
+3. **Faithfulness is the key risk for patients.** Invented or changed numbers come from cut-off inputs (512-token run), from greedy decoding, and possibly from the data itself (35% of the reference numbers are not in the abstracts). The demo turns this measure into a warning.
+4. **Domain.** The model handles review abstracts; it does not explain clinical notes. That would need different, sentence-level patient-facing data.
+
+**Problems met and fixed along the way** (also useful for the report):
+- FKGL counted decimals and abbreviations as sentence ends, which made the sources look easier than the targets. Fixed with a decimal-safe wrapper.
+- SentencePiece unknown symbols (µ, ≥, ±, …) were mapped to ASCII words.
+- transformers 5.x logs a training loss summed over gradient-accumulation steps; it is divided by 4 for the plots.
+- A Colab resume silently restarted the learning-rate schedule because the checkpoint on Drive was incomplete. `--resume` now only uses complete checkpoints.
+- The two runs trained on different Google accounts; the evaluation notebook can now take a model from anywhere.
+
+**Possible next steps:**
+- Unlikelihood training that penalizes jargon (Devaraj et al. 2021) or copying.
+- Filtering training pairs whose summaries contain facts not in the abstract.
+- A larger model (FLAN-T5-large) with LoRA.
+- A sentence-level, patient-oriented dataset (e.g. PLABA).
+- A small human evaluation of fluency, faithfulness and simplicity.
