@@ -258,3 +258,31 @@ Same as the main run except learning rate 1e-4 instead of 3e-4.
 - Cause: transformers restores the optimizer and scheduler only if *both* `optimizer.pt` and `scheduler.pt` are in the checkpoint. Otherwise it silently starts new ones. The same resume works correctly locally: a simulated crash plus resume continues the schedule exactly. The most likely explanation is that the session died before Google Drive had uploaded the 2 GB `optimizer.pt`, while the small `trainer_state.json` (which restores the step counter) had already arrived.
 - Effect on this run: epochs 6–10 ran with a learning rate decaying from 1e-4 to 5.3e-5, instead of from 5.3e-5 to 0 (a "warm restart"). Validation loss kept improving after the restart (1.881 → 1.856), so the run is usable. But strictly it is "lr 1e-4 with a warm restart at epoch 5", not a clean single linear schedule. It was not rerun because of the limited free GPU time. The conclusion that 3e-4 is better is unlikely to change: with the planned schedule, epochs 6–10 would have used even smaller learning rates.
 - Fix: `src/train.py --resume` now resumes only from a checkpoint that has every file needed for an exact resume (`trainer_state.json`, `model.safetensors`, `optimizer.pt`, `scheduler.pt`, `rng_state.pth`). It falls back to an older complete checkpoint, or stops with a clear error, and records `resumed_from` in `train_summary.json`. Tested with `tests/test_resume.py` and a local crash/resume simulation in which `optimizer.pt` was deleted.
+
+### Run 3 — variation (b) `flan-t5-base_lr3e-4_src512` (2026-11-26)
+Same as the main run except that inputs are cut at 512 tokens instead of 1024 (validation inputs too). 47% of the training abstracts are longer than 512 tokens, so for those the model never sees the end of the abstract, which is usually the results section.
+
+The run was clean: no disconnects, no resume, and a smooth learning-rate schedule. It took 161 min (about 27 min per epoch vs. 35 for 1024 tokens).
+
+| Epoch | Main (1024 tokens) | Variation (512 tokens) |
+|---|---|---|
+| 1 | 1.9357 | 2.0225 |
+| 2 | 1.8913 | 1.9754 |
+| 3 | 1.8684 | 1.9472 |
+| 4 | **1.8479** (best) | **1.9287** (best) |
+| 5 | 1.8482 | 1.9296 |
+| 6 | 1.8546 (stopped) | 1.9296 (stopped) |
+
+- **Cutting the input clearly hurts.** The best validation loss was 1.929 vs. 1.848, the largest difference of the three runs. The learning curves have the same shape (best at epoch 4, early stop after epoch 6), so the difference comes from the missing input, not from training dynamics.
+- **It also causes invented facts.** In validation sample 2 (CD006819.pub2, 602 tokens, so cut at 512), the model wrote results such as "serum bicarbonates were reduced (27 studies, 78 patients)" for a review that has only 4 studies. None of those numbers appear in the source. The results section was cut off, and the model filled in plausible-looking statistics. The 1024-token model does not do this on the same example. This is the clearest example so far of why the model must see the whole abstract.
+- Training was about 25% faster per epoch, which does not make up for the loss in quality.
+
+### Phase 5 summary: the three training runs
+
+| Run | Learning rate | Input tokens | Best val. loss (epoch) | Epochs run | GPU time |
+|---|---|---|---|---|---|
+| **`flan-t5-base_lr3e-4_src1024`** (main) | 3e-4 | 1024 | **1.848** (4) | 6, early stop | 3.5 h |
+| `flan-t5-base_lr1e-4_src1024` | 1e-4 | 1024 | 1.856 (9) | 10, limit reached | ~6 h (resumed once) |
+| `flan-t5-base_lr3e-4_src512` | 3e-4 | 512 | 1.929 (4) | 6, early stop | 2.7 h |
+
+**Selected model: the main run** (`checkpoints/flan-t5-base_lr3e-4_src1024/best` on Drive). It has the lowest validation loss and is the cheapest of the 1024-token runs. Test-set metrics for all three, plus the greedy vs. beam-search comparison, follow in Phase 6.

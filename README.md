@@ -10,7 +10,7 @@ Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS
 - [x] Phase 2 — Data acquisition and exploration
 - [x] Phase 3 — Preprocessing and evaluation code
 - [x] Phase 4 — Fine-tuning pipeline (Mac smoke test)
-- [ ] Phase 5 — Full training on Google Colab
+- [x] Phase 5 — Full training on Google Colab
 - [ ] Phase 6 — Evaluation and analysis
 - [ ] Phase 7 — Gradio demo
 - [ ] Phase 8 — Wrap-up
@@ -63,10 +63,12 @@ Add `--resume` to continue an interrupted run, and `--runs-dir` to choose where 
 
 **On Google Colab:** open [notebooks/02_train_colab.ipynb](notebooks/02_train_colab.ipynb) ([Open in Colab](https://colab.research.google.com/github/sissikhaled/medical-text-simplifier/blob/main/notebooks/02_train_colab.ipynb)), choose the T4 GPU runtime, pick a config in the Settings cell and *Run all*. Checkpoints and run files are saved to Google Drive, and an interrupted run resumes automatically.
 
-| Config | Run name | What changes |
-|---|---|---|
-| `configs/base.yaml` | `flan-t5-base_lr3e-4_src1024` | main run |
-| `configs/lr1e-4.yaml` | `flan-t5-base_lr1e-4_src1024` | learning rate 1e-4 |
-| `configs/src512.yaml` | `flan-t5-base_lr3e-4_src512` | inputs truncated to 512 tokens | Small outputs (config, loss CSV and plot, summary, validation samples) go to `runs/<run_name>/`; model weights never go into git.
+| Config | Run name | What changes | Best val. loss |
+|---|---|---|---|
+| `configs/base.yaml` | `flan-t5-base_lr3e-4_src1024` | main run | **1.848** |
+| `configs/lr1e-4.yaml` | `flan-t5-base_lr1e-4_src1024` | learning rate 1e-4 | 1.856 |
+| `configs/src512.yaml` | `flan-t5-base_lr3e-4_src512` | inputs truncated to 512 tokens | 1.929 |
+
+Small outputs (config, loss CSV and plot, summary, validation samples) go to `runs/<run_name>/`; model weights never go into git.
 
 Evaluation and demo instructions are added here as each phase is completed.
