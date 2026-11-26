@@ -42,6 +42,6 @@ This file is the reference for the course requirements. Every phase of the proje
 - [x] **Demo:** `app/app.py`.
 
 ### Deferred until the core project is done
-- [ ] Optional report (training methodology, hyperparameters, results, discussion) — material is collected along the way in `docs/PROGRESS.md`.
+- [x] Optional report (training methodology, hyperparameters, results, discussion): [docs/REPORT.md](REPORT.md).
 - [ ] Extra bonus: hybrid model.
 - [ ] Extra bonus: novel evaluation metric or visualization (e.g., attention heatmaps). Already in place and usable for this item: the SARI keep / delete / add breakdown, the copied-trigrams and unsupported-numbers measures (`src/eval/metrics.py`), and eager attention in training, so attention weights can be extracted for heatmaps.

@@ -22,7 +22,37 @@ Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS
 - **Learning rate 3e-4 beat 1e-4**, and reading the full abstract (1024 tokens) beat cutting it at 512. On long abstracts the cut causes more numbers that are not in the source.
 - **Greedy decoding** reads easier and scores slightly higher SARI, but writes 4 times as many numbers that are not in the source, so beam search is the default.
 
-All phases (0–8) are complete; [docs/PROGRESS.md](docs/PROGRESS.md) logs each step, decision and result. The bonus items are listed in [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
+**Project report:** [docs/REPORT.md](docs/REPORT.md) covers the data, training methodology, hyperparameters tried and their effect, results and discussion. All phases (0–8) are complete; [docs/PROGRESS.md](docs/PROGRESS.md) logs each step, decision and result.
+
+## Figures
+All figures are produced by [notebooks/04_results.ipynb](notebooks/04_results.ipynb) (training and test results) and [notebooks/01_data_exploration.ipynb](notebooks/01_data_exploration.ipynb) (data), and saved in [docs/figures/](docs/figures/).
+
+**Training: validation loss of the three runs.** The main run (lr 3e-4, 1024-token inputs) reaches the lowest loss at epoch 4; cutting inputs to 512 tokens is clearly worse.
+
+![Validation loss per epoch](docs/figures/val_loss_runs.png)
+
+**SARI split into its three parts.** Copying the input wins only through a free deletion score; the fine-tuned models win on keep and add.
+
+![SARI keep, delete and add per system](docs/figures/sari_components.png)
+
+**Reading level.** Every system's FKGL, measured from the source abstracts (15.15) toward the human summaries (13.63).
+
+![Reading level per system](docs/figures/fkgl_systems.png)
+
+**Readability change per test example** for the main model (negative = easier than its source).
+
+![FKGL change per example](docs/figures/fkgl_change_main.png)
+
+**Copying vs. numbers not found in the source.** The model copies far more than the human writers; greedy decoding copies less but invents more numbers.
+
+![Copied trigrams vs. unsupported numbers](docs/figures/copying_vs_numbers.png)
+
+**Data:** token lengths of abstracts and summaries, and readability of source vs. target.
+
+![Token lengths](docs/figures/token_lengths.png)
+
+![FKGL of sources vs. targets](docs/figures/fkgl_source_vs_target.png)
+
 
 ## Setup (macOS / Linux)
 ```bash
@@ -140,7 +170,7 @@ src/evaluate_model.py   test-set generation and scoring (resumable)
 app/app.py        Gradio demo
 notebooks/        01 data exploration, 02 training (Colab), 03 evaluation (Colab), 04 results
 runs/             per-run outputs: configs, loss logs and plots, validation samples, test predictions and metrics
-docs/             requirements, progress log, results tables, figures
+docs/             report, requirements, progress log, results tables, figures
 tests/            unit tests (pytest)
 models/, checkpoints/   model weights (not in git; ~1 GB per model on Google Drive)
 ```
@@ -156,3 +186,6 @@ models/, checkpoints/   model weights (not in git; ~1 GB per model on Google Dri
 - Dataset: Ashwin Devaraj, Iain Marshall, Byron Wallace and Junyi Jessy Li, *Paragraph-level Simplification of Medical Texts*, NAACL 2021 ([repository](https://github.com/AshOlogn/Paragraph-level-Simplification-of-Medical-Texts), CC BY 4.0). The texts come from Cochrane systematic reviews.
 - Model: FLAN-T5 (Chung et al., *Scaling Instruction-Finetuned Language Models*, 2022), `google/flan-t5-base` on Hugging Face.
 - SARI: Xu et al., *Optimizing Statistical Machine Translation for Text Simplification*, TACL 2016 (Hugging Face `evaluate` implementation).
+
+## License
+The code is released under the [MIT License](LICENSE). The Cochrane data in `data/processed/` keeps its original CC BY 4.0 license (see Credits).
