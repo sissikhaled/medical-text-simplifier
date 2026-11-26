@@ -24,3 +24,6 @@ runs/**/checkpoint-*/
 
 # trained models downloaded from Google Drive for evaluation / the demo
 models/
+
+# local Claude Code / preview settings
+.claude/

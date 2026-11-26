@@ -12,7 +12,7 @@ Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS
 - [x] Phase 4 — Fine-tuning pipeline (Mac smoke test)
 - [x] Phase 5 — Full training on Google Colab
 - [x] Phase 6 — Evaluation and analysis
-- [ ] Phase 7 — Gradio demo
+- [x] Phase 7 — Gradio demo
 - [ ] Phase 8 — Wrap-up
 
 ## Setup (macOS / Linux)
@@ -96,4 +96,14 @@ python -m src.eval.rescore runs/baseline_copy runs/baseline_zeroshot
 
 Fine-tuning beats the zero-shot model on every measure and lowers the reading level by about one grade. It simplifies mostly by selecting and shortening rather than rewriting. Copying the input scores higher SARI only because SARI gives a perfect deletion score to a system that deletes nothing. Full table, significance tests, figures and examples: [notebooks/04_results.ipynb](notebooks/04_results.ipynb) and [docs/PROGRESS.md](docs/PROGRESS.md).
 
-Demo instructions are added here when that phase is completed.
+## Demo (Gradio, runs locally)
+Needs the main run's model in `models/flan-t5-base_lr3e-4_src1024/` (the `best/` folder from Google Drive; either `models/<run>/` or `models/<run>/best/` works). Then:
+```bash
+python -m app.app
+```
+Open http://127.0.0.1:7860, paste medical text (or click one of the test-set examples) and press **Simplify**. A 350-word abstract takes a few seconds to about 30 seconds on an M2 Mac. The app shows:
+- the plain-language version;
+- word counts and reading grade (FKGL) of the input and output;
+- a warning listing any numbers in the output that do not appear in the input.
+
+Beam search is the default. Greedy decoding is faster but invents numbers more often. The model was trained on research abstracts: on short clinical notes it mostly copies or drops sentences. **It is a research demo, not medical advice.**

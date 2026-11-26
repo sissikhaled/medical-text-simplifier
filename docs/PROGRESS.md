@@ -364,3 +364,22 @@ Paired bootstrap (2,000 resamples of the 480 test examples) for the SARI differe
 - No human judged the outputs.
 
 **Answer to the question "does it simplify?"** Partly. The fine-tuned model produces fluent, shorter, somewhat more readable summaries that are mostly faithful, which is much better than the zero-shot model. But it simplifies mainly by selecting and shortening, not by rewriting jargon, and it does not reach the human summaries' level of rewriting.
+
+## Phase 7 — Gradio demo (2026-11-26)
+
+**What:** `app/app.py`, run with `python -m app.app` and opened at http://127.0.0.1:7860. It loads the main model (`models/flan-t5-base_lr3e-4_src1024/`, downloaded from Drive and not in git) once, then for each input:
+- normalizes the text the same way as in training (`normalize_text`, e.g. µ → micro), adds the `simplify: ` prefix and generates with beam 4 (default) or greedy decoding;
+- shows the word count and FKGL of input and output, and the generation time;
+- **lists every number in the output that does not appear in the input** ("check these numbers"). This turns the Phase 6 *unsupported numbers* measure into a warning for the reader. It is the main safeguard against the model's most dangerous error type;
+- warns when the input is longer than 1024 tokens (the rest is not read);
+- shows a disclaimer: research demo, not medical advice, and trained on research abstracts.
+
+Three test-set abstracts (not seen in training) are built in as examples. They fill in only the text, so the decoding choice stays as the user set it.
+
+**Checks:**
+- The local model reproduces the Colab test predictions word for word on the M2 Mac (MPS), which confirms the right model is loaded.
+- Speed on MPS: 2–8 s for 135–370-word abstracts with beam search, about 30 s for a 620-word one.
+- Tested in the browser: beam search on a test abstract (FKGL 19.7 → 13.6, no unsupported numbers); greedy on the abstract where greedy invented most numbers in Phase 6 (the warning listed 12 numbers, e.g. "98% CMI -2.00").
+- `tests/test_app.py` covers the numbers warning and the model-folder lookup (36 tests pass).
+
+**Observation (out of domain):** on a short clinical note ("acute exacerbation of COPD with hypoxaemia… commence nebulised salbutamol… prednisolone 40 mg for 5 days…") the model kept only the first two sentences, dropped the treatment plan entirely, and the output read *harder* (FKGL 12.5 → 14.1). It learned to summarize Cochrane review abstracts, not to explain clinical notes to patients. The demo says so. A model for clinical notes would need different training data (see the discussion of sentence-level datasets such as PLABA).
