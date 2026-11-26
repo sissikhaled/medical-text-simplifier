@@ -1,0 +1,18 @@
+{
+  "run": "flan-t5-base_lr3e-4_src512",
+  "model_dir": "best",
+  "decoding": "beam4",
+  "generation": {
+    "num_beams": 4,
+    "no_repeat_ngram_size": 3,
+    "max_new_tokens": 768,
+    "early_stopping": true
+  },
+  "prefix": "simplify: ",
+  "max_source_tokens": 512,
+  "batch_size": 8,
+  "device": "cuda",
+  "split": "test",
+  "n_examples": 480,
+  "generation_minutes_this_session": 20.1
+}

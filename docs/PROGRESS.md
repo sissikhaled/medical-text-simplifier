@@ -314,3 +314,53 @@ Both are also computed for the human reference summaries.
 **Findings:**
 1. **The human writers rewrite heavily.** Only 17% of their 3-word phrases are copied from the abstract. So the heavy copying seen in the Phase 5 validation samples is a model behavior, not something the references show it. (This corrects an earlier assumption that the summaries mostly reuse abstract sentences.)
 2. **About a third of the numbers in the human summaries are not in the abstract.** The Cochrane plain-language summaries were written from the full review, not from the abstract alone, so they contain facts the model cannot see in its input. Some of these are only reformulations (rounded percentages, "four" written as a digit), but the gap is large. Training on these pairs partly rewards writing numbers that are not in the input. This is a plausible contributor to invented statistics, together with input truncation (see run 3).
+
+### Test-set results (2026-11-26)
+The four evaluations ran on Colab: main run with beam 4 and with greedy decoding, and both variations with beam 4. Each covered all 480 test pairs. I checked every predictions file against the test set (same ids, sources and references, no empty outputs) and recomputed the metrics locally; they match Colab's exactly. Generation time on the GPU: 25 min for beam 4 and 12 min for greedy on the main model.
+
+New metric parts: SARI is now also reported as its three parts, keep, delete and add (`sari_keep`, `sari_delete`, `sari_add`; SARI is their mean). All results were rescored with `src/eval/rescore.py`.
+
+Analysis notebook: `notebooks/04_results.ipynb` (reads only saved files). Tables: `docs/results_test.csv`, `docs/results_bootstrap.csv`. Figures: `docs/figures/{sari_components,val_loss_runs,fkgl_systems,fkgl_change_main,copying_vs_numbers}.png`.
+
+| System | SARI | keep | delete | add | BLEU | ROUGE-L | FKGL | words | copied % | unsupp. num. % |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Copy input | **41.81** | 25.42 | 100.00 | 0.00 | 14.47 | 25.79 | 15.15 | 349.8 | 100.0 | 0.0 |
+| Zero-shot FLAN-T5 | 33.63 | 16.97 | 83.66 | 0.26 | 0.46 | 14.29 | 13.99 | 44.3 | 84.2 | 2.2 |
+| **Main (beam 4)** | 37.90 | 28.51 | 82.85 | 2.35 | 14.78 | 25.54 | 14.07 | 184.4 | 78.6 | 2.8 |
+| Main (greedy) | 38.76 | **29.49** | 83.73 | **3.06** | 14.89 | 25.59 | **13.56** | 205.0 | 63.8 | 11.5 |
+| lr 1e-4 (beam 4) | 37.84 | 28.56 | 82.87 | 2.08 | 15.03 | 25.64 | 14.26 | 191.1 | 79.6 | 3.2 |
+| 512 tokens (beam 4) | 37.74 | 27.68 | 82.76 | 2.77 | 13.09 | 24.87 | 13.89 | 171.5 | 73.4 | 4.0 |
+| Human reference | – | – | – | – | – | – | 13.63 | 214.5 | 17.4 | 34.7 |
+
+Paired bootstrap (2,000 resamples of the 480 test examples) for the SARI differences, with 95% intervals:
+
+| Comparison | SARI difference | 95% interval |
+|---|---|---|
+| Main minus copy input | -3.90 | -4.39 to -3.43 |
+| Main minus zero-shot | +4.28 | +3.71 to +4.81 |
+| Greedy minus beam 4 (main) | +0.86 | +0.48 to +1.24 |
+| Main minus lr 1e-4 | +0.07 | -0.25 to +0.37 |
+| Main minus 512 tokens (all test pairs) | +0.17 | -0.21 to +0.54 |
+| Main minus 512 tokens (235 sources longer than 512 tokens) | +0.56 | +0.08 to +1.02 |
+| Main minus 512 tokens (245 shorter sources) | -0.22 | -0.76 to +0.37 |
+
+**Findings**
+1. **Fine-tuning clearly helps compared with the zero-shot model.** SARI rises by 4.3 points (the interval excludes 0), BLEU goes from 0.5 to 14.8 and ROUGE-L from 14.3 to 25.5. The outputs have a summary-like length (184 words; the human summaries have 215 and the sources 350). The zero-shot model only wrote short 44-word extracts.
+2. **Copying the input has the highest SARI, but because of how SARI is computed.** The implementation scores "deleted nothing" as a perfect deletion (0/0 = 1), so copying gets 100 on *delete* for free. Any system that shortens a 350-word abstract to about 200 words will delete some words the reference kept. On the two parts that measure real work, the fine-tuned model beats copying: *keep* 28.5 vs. 25.4, *add* 2.4 vs. 0. BLEU and ROUGE-L of copying are about equal to the fine-tuned model's. This shows that n-gram overlap with a single paragraph-level reference barely separates "simplified" from "unchanged" here. For this reason the analysis relies on the SARI parts, FKGL and the copying measures as well as overall SARI.
+3. **Readability improves, but only part of the way.** Mean FKGL falls from 15.15 (sources) to 14.07: 1.08 of the 1.52 grades separating the sources from the human summaries, about 70% of the gap. 77% of the outputs are easier to read than their own source (median change -0.84 grades). However, everything stays at university reading level, as the human summaries do too (13.6).
+4. **The model is still mostly extractive.** 79% of its 3-word phrases are copied from the source, against 17% for the human writers. Its *add* score is low (2.4): it rarely introduces new, plainer wording. It did learn some plain-summary conventions, such as starting with "We searched for…/We included…" and explaining what a randomised controlled trial is. But it mostly selects and shortens source sentences rather than rewriting them.
+5. **Decoding involves a trade-off.** Greedy decoding scores significantly higher SARI (+0.86), reads easier (FKGL 13.56, below the human summaries) and copies less (64%). But **four times as many of its numbers are not in the source** (11.5% vs. 2.8%). In one test example, greedy wrote 16 unsupported numbers where beam search wrote none. For a patient-facing medical tool, faithfulness matters more than a small SARI gain, so **beam 4 stays the default** (and is used in the demo). Greedy is twice as fast.
+6. **The variations confirm the validation results, with small effects.** On the whole test set, neither lr 1e-4 nor 512-token inputs differ significantly from the main model in SARI. But on the 235 test abstracts longer than 512 tokens, the main model is significantly better (+0.56 SARI) and writes fewer unsupported numbers (3.0% vs. 4.4%). On shorter abstracts, where the cut-off never applies, the two are equal. So the loss comes specifically from the truncated inputs, which matches the invented statistics seen in Phase 5.
+7. **Errors seen in the examples** (picked automatically in the notebook, not by hand):
+   - A changed unit: "400 mcg versus 200 **mg**" (source: 200 mcg).
+   - A dropped fact: "We found **seven** studies, but only seven met our inclusion criteria" (source: 18 found, 7 included).
+   - Misspelled rare drug and condition names: "Amiriptylline", "bruxxism". The model builds rare words from sub-word pieces and occasionally assembles them wrongly.
+   - The example with the highest SARI is almost a copy: its human summary also copied the long list of funders. SARI rewards copying whenever the reference copies.
+
+**Limitations of this evaluation:**
+- FKGL only measures sentence and word length, not whether terms are understandable.
+- "Unsupported numbers" is a rough proxy. It misses wrong statements without numbers and counts correct reformulations (e.g. rounding) as unsupported.
+- There is one reference per abstract.
+- No human judged the outputs.
+
+**Answer to the question "does it simplify?"** Partly. The fine-tuned model produces fluent, shorter, somewhat more readable summaries that are mostly faithful, which is much better than the zero-shot model. But it simplifies mainly by selecting and shortening, not by rewriting jargon, and it does not reach the human summaries' level of rewriting.

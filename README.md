@@ -11,7 +11,7 @@ Course project: generative modeling in NLP, grade-5 tier. See [docs/REQUIREMENTS
 - [x] Phase 3 — Preprocessing and evaluation code
 - [x] Phase 4 — Fine-tuning pipeline (Mac smoke test)
 - [x] Phase 5 — Full training on Google Colab
-- [ ] Phase 6 — Evaluation and analysis
+- [x] Phase 6 — Evaluation and analysis
 - [ ] Phase 7 — Gradio demo
 - [ ] Phase 8 — Wrap-up
 
@@ -84,5 +84,16 @@ After a change to the metric code, recompute saved results without generating ag
 ```bash
 python -m src.eval.rescore runs/baseline_copy runs/baseline_zeroshot
 ```
+
+### Results (test set, 480 pairs)
+| System | SARI | FKGL ↓ | Words | Copied trigrams % | Numbers not in source % |
+|---|---|---|---|---|---|
+| Copy input | 41.8 | 15.15 | 350 | 100 | 0 |
+| Zero-shot FLAN-T5-base | 33.6 | 13.99 | 44 | 84 | 2.2 |
+| **Fine-tuned, main run (beam 4)** | 37.9 | 14.07 | 184 | 79 | 2.8 |
+| Fine-tuned, main run (greedy) | 38.8 | 13.56 | 205 | 64 | 11.5 |
+| Human summaries | – | 13.63 | 215 | 17 | 35 |
+
+Fine-tuning beats the zero-shot model on every measure and lowers the reading level by about one grade. It simplifies mostly by selecting and shortening rather than rewriting. Copying the input scores higher SARI only because SARI gives a perfect deletion score to a system that deletes nothing. Full table, significance tests, figures and examples: [notebooks/04_results.ipynb](notebooks/04_results.ipynb) and [docs/PROGRESS.md](docs/PROGRESS.md).
 
 Demo instructions are added here when that phase is completed.

@@ -54,6 +54,17 @@ def test_simplification_is_easier_to_read(perfect):
     assert perfect["fkgl_prediction"] < perfect["fkgl_source"]
 
 
+def test_sari_components_average_to_sari(perfect, copy):
+    for m in (perfect, copy):
+        parts = (m["sari_keep"] + m["sari_delete"] + m["sari_add"]) / 3
+        assert parts == pytest.approx(m["sari"], abs=0.02)
+
+
+def test_copy_gets_free_deletion_score(copy):
+    assert copy["sari_delete"] == 100
+    assert copy["sari_add"] == 0
+
+
 def test_copy_is_fully_extractive(copy):
     assert copy["copied_trigrams"] == 100
     assert copy["unsupported_numbers"] == 0

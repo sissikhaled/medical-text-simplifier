@@ -1,0 +1,20 @@
+{
+  "sari": 37.9,
+  "sari_keep": 28.51,
+  "sari_delete": 82.85,
+  "sari_add": 2.35,
+  "bleu": 14.78,
+  "rouge1": 45.84,
+  "rouge2": 18.31,
+  "rougeL": 25.54,
+  "fkgl_prediction": 14.07,
+  "fkgl_source": 15.15,
+  "fkgl_reference": 13.63,
+  "words_prediction": 184.4,
+  "length_ratio": 0.55,
+  "copied_trigrams": 78.59,
+  "copied_trigrams_reference": 17.39,
+  "unsupported_numbers": 2.84,
+  "unsupported_numbers_reference": 34.67,
+  "n_examples": 480
+}

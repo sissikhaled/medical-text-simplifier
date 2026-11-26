@@ -1,5 +1,8 @@
 {
   "sari": 41.81,
+  "sari_keep": 25.42,
+  "sari_delete": 100.0,
+  "sari_add": 0.0,
   "bleu": 14.47,
   "rouge1": 45.76,
   "rouge2": 20.4,

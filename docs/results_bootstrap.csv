@@ -1,0 +1,12 @@
+system / comparison,quantity,mean,95% low,95% high
+Copy input,SARI,41.81,41.43,42.19
+Zero-shot,SARI,33.63,33.21,34.07
+Main (beam 4),SARI,37.9,37.56,38.23
+Main (greedy),SARI,38.76,38.38,39.12
+lr 1e-4 (beam 4),SARI,37.84,37.47,38.18
+512 tokens (beam 4),SARI,37.74,37.37,38.1
+Main (beam 4) minus Copy input,SARI difference,-3.9,-4.39,-3.43
+Main (beam 4) minus Zero-shot,SARI difference,4.28,3.71,4.81
+Main (greedy) minus Main (beam 4),SARI difference,0.86,0.48,1.24
+Main (beam 4) minus lr 1e-4 (beam 4),SARI difference,0.07,-0.25,0.37
+Main (beam 4) minus 512 tokens (beam 4),SARI difference,0.17,-0.21,0.54

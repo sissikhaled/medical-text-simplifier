@@ -8,6 +8,9 @@ All metrics take parallel lists: `sources` (model inputs), `predictions`
   three scores: words correctly ADDED, correctly KEPT, and correctly DELETED.
   Copying the input earns nothing for adding/deleting, so it scores low.
   Implementation: Hugging Face `evaluate` "sari" (Xu et al., 2016).
+  Also reported as its three parts (sari_keep, sari_delete, sari_add; SARI is
+  their mean). Note: the implementation scores "deleted nothing" as a perfect
+  deletion (0/0 = 1), so copying the input gets 100 for deletion for free.
 - BLEU (0-100): n-gram precision against the reference (sacrebleu, corpus level).
 - ROUGE-1/2/L (0-100): n-gram / longest-common-subsequence overlap F1 with the
   reference (rouge_score, stemming on, averaged over examples).
@@ -26,6 +29,7 @@ All metrics take parallel lists: `sources` (model inputs), `predictions`
 from __future__ import annotations
 
 import re
+import sys
 from statistics import mean
 
 import evaluate
@@ -49,6 +53,30 @@ def sari(sources: list[str], predictions: list[str], references: list[str]) -> f
         sources=sources, predictions=predictions, references=[[r] for r in references]
     )
     return float(result["sari"])
+
+
+def _ngrams(words: list[str], n: int) -> list[str]:
+    return [" ".join(words[i:i + n]) for i in range(len(words) - n + 1)]
+
+
+def sari_components(sources: list[str], predictions: list[str],
+                    references: list[str]) -> dict[str, float]:
+    """SARI split into keep / delete / add (each 0-100, averaged over examples).
+
+    Uses the same n-gram scoring function and text normalization as the
+    `evaluate` SARI metric, so the mean of the three equals `sari()`.
+    """
+    module = sys.modules[type(_get_sari()).__module__]
+    keep, delete, add = [], [], []
+    for src, pred, ref in zip(sources, predictions, references):
+        s_words, c_words, r_words = (module.normalize(t).split(" ") for t in (src, pred, ref))
+        parts = [module.SARIngram(_ngrams(s_words, n), _ngrams(c_words, n),
+                                  [_ngrams(r_words, n)], 1) for n in (1, 2, 3, 4)]
+        keep.append(mean(p[0] for p in parts))
+        delete.append(mean(p[1] for p in parts))
+        add.append(mean(p[2] for p in parts))
+    return {"sari_keep": 100 * mean(keep), "sari_delete": 100 * mean(delete),
+            "sari_add": 100 * mean(add)}
 
 
 def bleu(predictions: list[str], references: list[str]) -> float:
@@ -108,6 +136,7 @@ def compute_all(
     src_words = [len(s.split()) for s in sources]
     results = {
         "sari": sari(sources, predictions, references),
+        **sari_components(sources, predictions, references),
         "bleu": bleu(predictions, references),
         **rouge(predictions, references),
         "fkgl_prediction": mean(fkgl(p) for p in predictions),
